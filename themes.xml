@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ shows its own system splash first; keep it plain black so it flows into the HTML splash. -->
+    <style name="Theme.BtChat" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/bt_black</item>
+        <item name="android:statusBarColor">@color/bt_black</item>
+        <item name="android:navigationBarColor">@color/bt_black</item>
+        <item name="android:windowSplashScreenBackground">@color/bt_black</item>
+    </style>
+</resources>

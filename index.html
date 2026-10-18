@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a">
+<title>BT Chat</title>
+<style>
+:root{--bg:#0a0a0a;--panel:#141414;--panel2:#1b1b1b;--line:#2a2a2a;--text:#ececec;--mut:#8b8b8b;--err:#e07a7a;--ink:#0a0a0a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none}
+#app{height:100%;position:relative}
+.view{display:none;position:absolute;inset:0;flex-direction:column;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+.view.active{display:flex}
+button{font:inherit;color:var(--text);background:var(--panel);border:1px solid #333;border-radius:12px;padding:12px 14px;cursor:pointer}
+button:active:not(:disabled){background:#242424}
+button:disabled{opacity:.4;cursor:default}
+button.pri{background:#ececec;color:var(--ink);border-color:#ececec;font-weight:600}
+button.pri:active:not(:disabled){background:#cfcfcf}
+.top{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);min-height:56px}
+.top h1{margin:0;font-size:14px;font-weight:600;letter-spacing:.3em;flex:1;padding-left:4px}
+.top .icon{padding:8px 12px;font-size:20px;line-height:1;background:transparent;border-color:transparent}
+.scroll{flex:1;overflow-y:auto;padding:14px 14px 24px;-webkit-overflow-scrolling:touch}
+.hidden{display:none!important}
+.banner{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13.5px}
+.banner.warn{border-color:#5a3a3a;color:#f0c4c4}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:4px 14px;margin-bottom:12px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+.row:last-child{border-bottom:0}
+.row span{color:var(--mut)}
+.row b{font-weight:600}
+.row b.bad{color:var(--err)}
+.fix{display:flex;gap:8px;margin:-4px 0 12px}
+.fix button{flex:1;font-size:14px}
+.big{display:block;width:100%;text-align:left;margin-bottom:10px;padding:16px}
+.big small{display:block;margin-top:2px;font-weight:400;font-size:12.5px;opacity:.7}
+h2{font-size:12px;letter-spacing:.18em;color:var(--mut);font-weight:600;margin:22px 4px 8px;text-transform:uppercase}
+.thread{display:flex;gap:12px;align-items:center;width:100%;text-align:left;margin-bottom:8px;padding:12px 14px}
+.thread .av{width:38px;height:38px;border-radius:50%;background:#262626;display:flex;align-items:center;justify-content:center;font-weight:600;flex:none}
+.thread .tx{flex:1;min-width:0}
+.thread .nm{font-weight:600;display:block}
+.thread .sn{display:block;color:var(--mut);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thread .tm{color:var(--mut);font-size:12px;flex:none}
+.note{color:var(--mut);font-size:12.5px;margin:14px 4px 0}
+.empty{color:var(--mut);text-align:center;padding:22px 12px;font-size:14px}
+.cname{flex:1;min-width:0}
+.cname b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cname span{display:flex;align-items:center;gap:6px;color:var(--mut);font-size:12.5px}
+.dot{width:8px;height:8px;border-radius:50%;background:#555;flex:none}
+.dot.on{background:#fff;box-shadow:0 0 8px #fff}
+.dot.wait{background:#aaa;animation:pulse 1.2s infinite}
+.dot.err{background:var(--err)}
+@keyframes pulse{50%{opacity:.25}}
+#cbanner{margin:10px 12px 0;display:none}
+#cbanner.show{display:block}
+#cbanner .acts{display:flex;gap:8px;margin-top:10px}
+#cbanner .acts button{flex:1;padding:10px;font-size:14px}
+#msgs{flex:1;overflow-y:auto;padding:12px 12px 6px;display:flex;flex-direction:column;gap:6px;-webkit-overflow-scrolling:touch}
+.day{align-self:center;color:var(--mut);font-size:11.5px;margin:10px 0 4px;letter-spacing:.06em}
+.msg{max-width:80%;padding:8px 12px 6px;border-radius:16px;word-wrap:break-word;overflow-wrap:anywhere}
+.msg p{margin:0;white-space:pre-wrap}
+.msg .meta{display:flex;justify-content:flex-end;gap:6px;font-size:10.5px;opacity:.6;margin-top:3px}
+.msg.them{align-self:flex-start;background:var(--panel2);border:1px solid var(--line);border-bottom-left-radius:5px}
+.msg.me{align-self:flex-end;background:#e8e8e8;color:var(--ink);border-bottom-right-radius:5px}
+.msg.me.failed{background:transparent;color:var(--text);border:1px dashed var(--err)}
+.msg.me.failed .meta{color:var(--err);opacity:1}
+.composer{display:flex;gap:8px;align-items:flex-end;padding:10px 12px;border-top:1px solid var(--line)}
+#input{flex:1;background:#0f0f0f;color:var(--text);border:1px solid var(--line);border-radius:14px;padding:11px 13px;font:inherit;resize:none;height:44px;max-height:120px}
+#input:disabled{opacity:.5}
+#send{padding:0 18px;height:44px}
+.list button{margin-bottom:8px}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+#modal.show{display:flex}
+#modal .card2{background:#151515;border:1px solid #333;border-radius:16px;padding:18px;width:100%;max-width:360px}
+#modal h3{margin:0 0 6px;font-weight:600;font-size:17px}
+#modal p{margin:0 0 14px;color:#bdbdbd;font-size:14px;white-space:pre-wrap}
+#modal .btns{display:flex;flex-direction:column;gap:8px}
+#toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#e8e8e8;color:var(--ink);padding:9px 14px;border-radius:20px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:30;max-width:90vw;text-align:center}
+#toast.show{opacity:1}
+
+/* ---------- cinematic splash ---------- */
+#splash{position:fixed;inset:0;z-index:100;background:#000;overflow:hidden;transition:opacity .75s ease,visibility .75s}
+#splash.out{opacity:0;visibility:hidden;pointer-events:none}
+#splash .stage{position:absolute;inset:0;transition:transform .9s cubic-bezier(.2,.7,.2,1)}
+#splash.out .stage{transform:scale(1.1)}
+#splash .vig{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 38%,rgba(255,255,255,.09) 0,rgba(0,0,0,0) 55%);opacity:0;animation:spFade 1.8s .1s forwards}
+#splash .ring{position:absolute;left:50%;top:38%;width:78vmin;height:78vmin;margin:-39vmin 0 0 -39vmin;border:1px solid rgba(255,255,255,.6);border-radius:50%;opacity:0;transform:scale(.04);animation:spRing 2.6s cubic-bezier(.15,.6,.25,1) .25s infinite}
+#splash .ring:nth-child(3){animation-delay:.85s}
+#splash .ring:nth-child(4){animation-delay:1.45s}
+#splash .core{position:absolute;left:50%;top:38%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:#fff;box-shadow:0 0 22px 5px rgba(255,255,255,.75);opacity:0;animation:spFade .6s .1s forwards,spBeat 1.3s .7s ease-in-out infinite}
+#splash .sp-text{position:absolute;top:56%;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:18px}
+#splash .sp-title{margin:0;font-size:clamp(26px,8.5vw,42px);font-weight:300;color:#fff;letter-spacing:.08em;padding-left:.42em;opacity:0;filter:blur(14px);animation:spTitle 1.6s 1s cubic-bezier(.2,.7,.2,1) forwards}
+#splash .sp-line{height:1px;width:0;background:linear-gradient(90deg,rgba(255,255,255,0),#fff,rgba(255,255,255,0));animation:spLine 1.1s 1.25s cubic-bezier(.3,.7,.2,1) forwards}
+#splash .sp-tag{font-size:11.5px;letter-spacing:.32em;padding-left:.32em;text-transform:uppercase;color:#8b8b8b;opacity:0;animation:spFade 1.1s 2s forwards}
+#splash .sp-skip{position:absolute;left:0;right:0;bottom:calc(5vh + env(safe-area-inset-bottom));text-align:center;font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:#4a4a4a;opacity:0;animation:spFade 1s 1.6s forwards}
+@keyframes spFade{to{opacity:1}}
+@keyframes spBeat{50%{box-shadow:0 0 30px 9px rgba(255,255,255,.9)}}
+@keyframes spRing{0%{opacity:0;transform:scale(.04)}14%{opacity:.85}100%{opacity:0;transform:scale(1.2)}}
+@keyframes spTitle{to{opacity:1;filter:blur(0);letter-spacing:.42em}}
+@keyframes spLine{to{width:62%}}
+@media (prefers-reduced-motion:reduce){
+  #splash *{animation-duration:.01ms!important;animation-delay:0s!important;animation-iteration-count:1!important;animation-fill-mode:forwards!important}
+  #splash .ring{display:none}
+}
+</style>
+</head>
+<body>
+<div id="splash" aria-hidden="true">
+  <div class="stage">
+    <div class="vig"></div>
+    <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+    <div class="core"></div>
+    <div class="sp-text">
+      <h1 class="sp-title">BT CHAT</h1>
+      <div class="sp-line"></div>
+      <div class="sp-tag">Two phones · No internet</div>
+    </div>
+    <div class="sp-skip">Tap to skip</div>
+  </div>
+</div>
+<div id="app">
+
+  <!-- HOME -->
+  <section id="v-home" class="view active">
+    <div class="top"><h1>BT CHAT</h1></div>
+    <div class="scroll">
+      <div id="banner" class="banner hidden"></div>
+      <div class="card">
+        <div class="row"><span>Bluetooth app</span><b id="r-bridge">…</b></div>
+        <div class="row"><span>Bluetooth</span><b id="r-bt">…</b></div>
+        <div class="row"><span>Permission</span><b id="r-perm">…</b></div>
+      </div>
+      <div class="fix">
+        <button id="fix-perm" class="hidden">Allow Bluetooth access</button>
+        <button id="fix-bt" class="hidden">Open Bluetooth settings</button>
+      </div>
+      <button class="big pri" id="b-host">Host a chat<small>Wait for the other phone to connect</small></button>
+      <button class="big" id="b-join">Join a chat<small>Connect to a phone that is hosting</small></button>
+      <h2>Saved chats</h2>
+      <div id="threads"></div>
+      <p class="note">First pair the two phones once in Android Settings → Bluetooth. Then one phone taps <b>Host</b> and the other taps <b>Join</b> and picks it. Keep this app open on both phones while you chat.</p>
+    </div>
+  </section>
+
+  <!-- JOIN -->
+  <section id="v-join" class="view">
+    <div class="top"><button class="icon" id="j-back" aria-label="Back">‹</button><h1>JOIN</h1><button id="j-refresh" style="padding:8px 12px">Refresh</button></div>
+    <div class="scroll">
+      <p class="note" style="margin:0 4px 12px">Pick the phone that is hosting. Only phones already paired with this one are listed.</p>
+      <div id="paired" class="list"></div>
+      <button id="j-settings" style="width:100%;margin-top:6px">Pair a new phone in Bluetooth settings</button>
+    </div>
+  </section>
+
+  <!-- CHAT -->
+  <section id="v-chat" class="view">
+    <div class="top">
+      <button class="icon" id="c-back" aria-label="Back">‹</button>
+      <div class="cname"><b id="c-name"></b><span><i class="dot" id="c-dot"></i><em id="c-status" style="font-style:normal"></em></span></div>
+      <button class="icon" id="c-menu" aria-label="Menu">⋯</button>
+    </div>
+    <div id="cbanner" class="banner"></div>
+    <div id="msgs"></div>
+    <div class="composer">
+      <textarea id="input" rows="1" maxlength="4000" placeholder="Not connected" disabled></textarea>
+      <button id="send" class="pri" disabled>Send</button>
+    </div>
+  </section>
+</div>
+
+<div id="modal"><div class="card2"><h3 id="m-title"></h3><p id="m-body"></p><div class="btns" id="m-btns"></div></div></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/*
+  BT Chat — single-file UI.
+
+  This file contains the interface and all chat logic. It does NOT contain Bluetooth itself:
+  a web page cannot open Bluetooth Classic (RFCOMM) sockets. All Bluetooth is done by a small native
+  Android class that must inject an object named `BTBridge` into this page. The contract is described
+  in README.md. If `window.BTBridge` is missing, this page says so and disables connecting.
+
+  Page -> native (all return a JSON string):
+    info()                  {ok, version, supported, enabled, hasPermission, sdk}
+    requestPermission()     {ok}            result arrives as a 'perm' event
+    pairedDevices()         {ok, devices:[{name,address}]}  or {ok:false,error}
+    listen()                {ok}            state events follow
+    connect(address)        {ok}            state events follow
+    send(ref, line)         {ok}            result arrives as a 'write' event
+    close()                 {ok}
+    openBluetoothSettings() {ok}
+  Native -> page: window.onBtEvent(jsonString) with one of
+    {type:'state', state:'listening'|'connecting'|'connected'|'closed'|'error', peer?:{name,address}, detail?}
+    {type:'line', line}                 one received line of text
+    {type:'write', ref, ok, error?}     result of send(ref, line)
+    {type:'perm', granted}
+*/
+(function(){
+const PROTOCOL_VERSION=1, MAX_MSGS=1000, MAX_LEN=4000, LS_KEY='btchat_v1';
+const $=s=>document.querySelector(s);
+function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,9);
+
+/* ---------- storage ---------- */
+let db={threads:{}};
+let warnedSave=false;
+function loadDb(){
+  try{
+    const raw=localStorage.getItem(LS_KEY);
+    if(raw){const o=JSON.parse(raw);if(o&&o.threads)db=o;}
+  }catch(e){}
+  for(const k in db.threads){const t=db.threads[k];if(!t||!Array.isArray(t.msgs)){delete db.threads[k];continue;}
+    t.msgs.forEach(m=>{if(m.me&&m.st==='sending')m.st='failed';});}
+}
+let saveT=null;
+function saveDb(){clearTimeout(saveT);saveT=setTimeout(saveNow,120);}
+function saveNow(){
+  try{localStorage.setItem(LS_KEY,JSON.stringify(db));}
+  catch(e){if(!warnedSave){warnedSave=true;toast('Could not save chat history on this phone');}}
+}
+window.addEventListener('pagehide',saveNow);
+function thread(key,name){
+  let t=db.threads[key];
+  if(!t)t=db.threads[key]={key:key,name:name||key,msgs:[],updated:Date.now()};
+  if(name)t.name=name;
+  return t;
+}
+function addMsg(t,m){
+  t.msgs.push(m);
+  if(t.msgs.length>MAX_MSGS)t.msgs.splice(0,t.msgs.length-MAX_MSGS);
+  t.updated=Date.now();saveDb();
+}
+
+/* ---------- bridge ---------- */
+function call(name){
+  const B=window.BTBridge,args=Array.prototype.slice.call(arguments,1);
+  if(!B||typeof B[name]!=='function')return{ok:false,error:'bridge-missing'};
+  try{const r=B[name].apply(B,args);return r?JSON.parse(r):{ok:true};}
+  catch(e){return{ok:false,error:'bridge-error',detail:String(e&&e.message||e)};}
+}
+const ERR={
+  'bridge-missing':'This page is not running inside the Bluetooth app.',
+  'bridge-error':'The Bluetooth app returned an error.',
+  'no-bluetooth':'This phone has no Bluetooth.',
+  permission:'Bluetooth permission is needed first.',
+  disabled:'Bluetooth is turned off.',
+  'not-connected':'Not connected.',
+  'bad-address':'That device address is not valid.',
+  'listen-failed':'Could not start waiting for a connection.',
+  failed:'Something went wrong.'
+};
+const errText=r=>(ERR[r.error]||ERR.failed)+(r.detail?' ('+r.detail+')':'');
+let env={bridge:false,version:0,supported:false,enabled:false,hasPermission:false};
+function refreshEnv(){
+  const r=call('info');
+  env={bridge:!!r.ok,version:r.version||0,supported:!!r.supported,enabled:!!r.enabled,hasPermission:!!r.hasPermission};
+  return env;
+}
+const bridgeUsable=()=>env.bridge&&env.version===PROTOCOL_VERSION&&env.supported;
+
+/* ---------- session ---------- */
+const IDLE={role:null,state:'idle',peer:null,detail:'',threadKey:null};
+let sess=Object.assign({},IDLE);
+let view='home';
+const curThread=()=>sess.threadKey?db.threads[sess.threadKey]:null;
+
+/* ---------- helpers ---------- */
+let toastT;
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800);}
+let modalResolve=null;
+function ask(title,body,buttons){
+  return new Promise(res=>{
+    if(modalResolve)modalResolve(null);
+    modalResolve=res;
+    $('#m-title').textContent=title;$('#m-body').textContent=body||'';
+    $('#m-body').style.display=body?'':'none';
+    const box=$('#m-btns');box.textContent='';
+    buttons.forEach(b=>{
+      const x=el('button',b.primary?'pri':'',b.label);
+      x.onclick=()=>{closeModal(b.id);};
+      box.appendChild(x);
+    });
+    $('#modal').classList.add('show');
+  });
+}
+function closeModal(val){
+  $('#modal').classList.remove('show');
+  if(modalResolve){const r=modalResolve;modalResolve=null;r(val===undefined?null:val);}
+}
+const hm=t=>new Date(t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+function dayLabel(t){
+  const d=new Date(t),n=new Date(),y=new Date();y.setDate(n.getDate()-1);
+  if(d.toDateString()===n.toDateString())return'Today';
+  if(d.toDateString()===y.toDateString())return'Yesterday';
+  return d.toLocaleDateString([],{day:'numeric',month:'short',year:'numeric'});
+}
+function show(v){
+  view=v;
+  document.querySelectorAll('.view').forEach(e=>e.classList.toggle('active',e.id==='v-'+v));
+  if(v==='home'){refreshEnv();renderHome();}
+  if(v==='chat')renderChat(true);
+}
+
+/* ---------- home ---------- */
+function setRow(id,text,bad){const e=$(id);e.textContent=text;e.className=bad?'bad':'';}
+function renderHome(){
+  const b=$('#banner');
+  if(!env.bridge){
+    b.className='banner warn';
+    b.textContent='Bluetooth is not available here. This page is not running inside the Bluetooth app, and a normal browser cannot use Bluetooth Classic. You can read saved chats, but you cannot connect.';
+  }else if(env.version!==PROTOCOL_VERSION){
+    b.className='banner warn';
+    b.textContent='The app and this page are different versions, so connecting is disabled. Rebuild the app with the matching native code.';
+  }else if(!env.supported){
+    b.className='banner warn';b.textContent='This phone does not report Bluetooth support.';
+  }else b.className='banner hidden';
+
+  setRow('#r-bridge',env.bridge?(env.version===PROTOCOL_VERSION?'Found':'Wrong version'):'Missing',!env.bridge||env.version!==PROTOCOL_VERSION);
+  setRow('#r-bt',!env.bridge?'Unknown':env.enabled?'On':'Off',env.bridge&&!env.enabled);
+  setRow('#r-perm',!env.bridge?'Unknown':env.hasPermission?'Allowed':'Needed',env.bridge&&!env.hasPermission);
+  $('#fix-perm').classList.toggle('hidden',!(bridgeUsable()&&!env.hasPermission));
+  $('#fix-bt').classList.toggle('hidden',!(bridgeUsable()&&env.hasPermission&&!env.enabled));
+  $('#b-host').disabled=!bridgeUsable();
+  $('#b-join').disabled=!bridgeUsable();
+
+  const box=$('#threads');box.textContent='';
+  const keys=Object.keys(db.threads).sort((a,b)=>db.threads[b].updated-db.threads[a].updated);
+  if(!keys.length){box.appendChild(el('div','empty','No saved chats yet.'));return;}
+  keys.forEach(k=>{
+    const t=db.threads[k],last=t.msgs[t.msgs.length-1];
+    const b2=el('button','thread');
+    b2.appendChild(el('div','av',(t.name||'?').trim().charAt(0).toUpperCase()||'?'));
+    const tx=el('div','tx');tx.appendChild(el('span','nm',t.name));
+    tx.appendChild(el('span','sn',last?((last.me?'You: ':'')+last.x):'No messages'));
+    b2.appendChild(tx);b2.appendChild(el('div','tm',last?hm(last.t):''));
+    b2.onclick=()=>openHistory(k);
+    box.appendChild(b2);
+  });
+}
+function askPermission(){
+  const r=call('requestPermission');
+  if(!r.ok)toast(errText(r));else toast('Choose "Allow" in the Android prompt');
+}
+function preflight(){
+  refreshEnv();renderHome();
+  if(!bridgeUsable()){toast(ERR['bridge-missing']);return false;}
+  if(!env.hasPermission){askPermission();return false;}
+  if(!env.enabled){
+    ask('Bluetooth is off','Turn Bluetooth on, then come back to this app.',[{id:'open',label:'Open Bluetooth settings',primary:true},{id:'no',label:'Cancel'}])
+      .then(v=>{if(v==='open')call('openBluetoothSettings');});
+    return false;
+  }
+  return true;
+}
+$('#fix-perm').onclick=askPermission;
+$('#fix-bt').onclick=()=>call('openBluetoothSettings');
+$('#b-host').onclick=()=>startHost(null);
+$('#b-join').onclick=()=>{if(!preflight())return;show('join');loadPaired();};
+
+/* ---------- join ---------- */
+function loadPaired(){
+  const box=$('#paired');box.textContent='';
+  const r=call('pairedDevices');
+  if(!r.ok){box.appendChild(el('div','empty',errText(r)));return;}
+  if(!r.devices||!r.devices.length){box.appendChild(el('div','empty','No paired phones yet. Pair the other phone in Android Bluetooth settings first, then tap Refresh.'));return;}
+  r.devices.forEach(d=>{
+    const b=el('button','thread');
+    b.appendChild(el('div','av',(d.name||'?').trim().charAt(0).toUpperCase()||'?'));
+    const tx=el('div','tx');tx.appendChild(el('span','nm',d.name||d.address));tx.appendChild(el('span','sn',d.address));
+    b.appendChild(tx);
+    b.onclick=()=>startJoin(d);
+    box.appendChild(b);
+  });
+}
+$('#j-back').onclick=()=>show('home');
+$('#j-refresh').onclick=()=>{refreshEnv();loadPaired();};
+$('#j-settings').onclick=()=>call('openBluetoothSettings');
+
+/* ---------- start / stop ---------- */
+function startHost(peerHint){
+  if(!preflight())return;
+  const r=call('listen');
+  if(!r.ok){toast(errText(r));return;}
+  sess={role:'host',state:'listening',peer:peerHint,detail:'',threadKey:peerHint?peerHint.address:null};
+  show('chat');
+}
+function startJoin(dev){
+  if(!preflight())return;
+  const r=call('connect',dev.address);
+  if(!r.ok){toast(errText(r));return;}
+  sess={role:'join',state:'connecting',peer:{name:dev.name||dev.address,address:dev.address},detail:'',threadKey:dev.address};
+  thread(dev.address,dev.name||dev.address);
+  show('chat');
+}
+function openHistory(key){
+  const t=db.threads[key];if(!t)return;
+  sess={role:'view',state:'idle',peer:{name:t.name,address:key},detail:'',threadKey:key};
+  show('chat');
+}
+const active=()=>sess.state==='connected'||sess.state==='connecting'||sess.state==='listening';
+async function leaveChat(){
+  if(active()){
+    const v=await ask(sess.state==='connected'?'Disconnect and leave?':'Stop and leave?','',[{id:'yes',label:sess.state==='connected'?'Disconnect':'Stop',primary:true},{id:'no',label:'Stay'}]);
+    if(v!=='yes')return;
+    call('close');
+  }
+  failPending();
+  sess=Object.assign({},IDLE);
+  show('home');
+}
+$('#c-back').onclick=leaveChat;
+$('#c-menu').onclick=async()=>{
+  const btns=[];
+  if(active())btns.push({id:'disc',label:sess.state==='connected'?'Disconnect':'Stop'});
+  if(curThread())btns.push({id:'del',label:'Delete this chat from this phone'});
+  btns.push({id:'x',label:'Close'});
+  const v=await ask('Chat options','',btns);
+  if(v==='disc'){call('close');}
+  if(v==='del'){
+    const ok=await ask('Delete this chat?','Messages are removed from this phone only. The other phone keeps its copy.',[{id:'y',label:'Delete',primary:true},{id:'n',label:'Cancel'}]);
+    if(ok==='y'){
+      if(active())call('close');
+      delete db.threads[sess.threadKey];saveNow();
+      sess=Object.assign({},IDLE);show('home');
+    }
+  }
+};
+
+/* ---------- chat rendering ---------- */
+const STATUS={
+  idle:['','Not connected'],
+  listening:['wait','Waiting for the other phone to join…'],
+  connecting:['wait','Connecting…'],
+  connected:['on','Connected'],
+  closed:['','Disconnected'],
+  error:['err','Could not connect']
+};
+function renderChat(forceBottom){
+  if(view!=='chat')return;
+  const t=curThread();
+  const name=(sess.peer&&sess.peer.name)||(t&&t.name)||(sess.role==='host'?'Waiting for a friend':'Chat');
+  $('#c-name').textContent=name;
+  const st=STATUS[sess.state]||STATUS.idle;
+  $('#c-dot').className='dot '+st[0];
+  $('#c-status').textContent=st[1];
+
+  const cb=$('#cbanner');cb.textContent='';
+  const showBanner=sess.state!=='connected';
+  cb.classList.toggle('show',showBanner);
+  if(showBanner){
+    if(sess.state==='listening'){
+      cb.appendChild(el('div','', 'On the other phone: open BT Chat → Join → pick this phone. The phones must already be paired.'));
+      const a=el('div','acts');const b=el('button','','Stop waiting');b.onclick=leaveChat;a.appendChild(b);cb.appendChild(a);
+    }else if(sess.state==='connecting'){
+      cb.appendChild(el('div','','Trying to reach '+name+'. This can take up to about 15 seconds. The other phone must be hosting.'));
+    }else{
+      const msg=sess.detail||(sess.state==='idle'?'This is a saved chat. You can read it, but you are not connected.':'Disconnected.');
+      cb.appendChild(el('div','',msg));
+      const a=el('div','acts');
+      if(sess.peer&&sess.peer.address){
+        const rj=el('button','pri','Reconnect');
+        rj.onclick=()=>startJoin(sess.peer);a.appendChild(rj);
+      }
+      const hb=el('button','',sess.peer&&sess.peer.address?'Host instead':'Wait for connection');
+      hb.onclick=()=>startHost(sess.peer);a.appendChild(hb);
+      cb.appendChild(a);
+    }
+  }
+  const on=sess.state==='connected';
+  $('#input').disabled=!on;$('#send').disabled=!on;
+  $('#input').placeholder=on?'Message':'Not connected';
+  renderMsgs(forceBottom);
+}
+function renderMsgs(forceBottom){
+  const box=$('#msgs'),t=curThread();
+  const near=box.scrollHeight-box.scrollTop-box.clientHeight<90;
+  box.textContent='';
+  if(!t||!t.msgs.length){
+    box.appendChild(el('div','empty',sess.state==='connected'?'Connected. Say hi.':'No messages yet.'));
+    return;
+  }
+  let lastDay='';
+  t.msgs.forEach(m=>{
+    const d=dayLabel(m.t);
+    if(d!==lastDay){box.appendChild(el('div','day',d));lastDay=d;}
+    const b=el('div','msg '+(m.me?'me':'them')+(m.me&&m.st==='failed'?' failed':''));
+    b.appendChild(el('p','',m.x));
+    const meta=el('div','meta');
+    if(m.me&&m.st==='failed'){meta.appendChild(el('span','','Not sent — tap to retry'));}
+    else{
+      meta.appendChild(el('span','',hm(m.t)));
+      if(m.me)meta.appendChild(el('span','',m.st==='delivered'?'✓✓':m.st==='sent'?'✓':'…'));
+    }
+    b.appendChild(meta);
+    if(m.me&&m.st==='failed')b.onclick=()=>retry(m.id);
+    box.appendChild(b);
+  });
+  if(forceBottom||near)box.scrollTop=box.scrollHeight;
+}
+
+/* ---------- sending ---------- */
+function wire(m){return JSON.stringify({k:'m',id:m.id,t:m.t,x:m.x});}
+function sendText(){
+  const inp=$('#input'),text=inp.value.trim();
+  if(!text)return;
+  if(sess.state!=='connected'){toast('Not connected — message not sent');return;}
+  const t=curThread();if(!t)return;
+  const m={id:uid(),t:Date.now(),x:text.slice(0,MAX_LEN),me:true,st:'sending'};
+  addMsg(t,m);
+  const r=call('send',m.id,wire(m));
+  if(!r.ok){m.st='failed';saveDb();toast(errText(r));}
+  inp.value='';inp.style.height='44px';
+  renderChat(true);
+}
+function retry(id){
+  const t=curThread();if(!t)return;
+  const m=t.msgs.find(x=>x.id===id&&x.me);if(!m)return;
+  if(sess.state!=='connected'){toast('Not connected — reconnect first');return;}
+  m.st='sending';m.t=Date.now();
+  const r=call('send',m.id,wire(m));
+  if(!r.ok){m.st='failed';toast(errText(r));}
+  saveDb();renderChat(false);
+}
+function failPending(){
+  const t=curThread();if(!t)return;
+  let ch=false;
+  t.msgs.forEach(m=>{if(m.me&&m.st==='sending'){m.st='failed';ch=true;}});
+  if(ch)saveDb();
+}
+$('#send').onclick=sendText;
+$('#input').addEventListener('input',function(){this.style.height='44px';this.style.height=Math.min(120,this.scrollHeight)+'px';});
+
+/* ---------- native events ---------- */
+window.onBtEvent=function(raw){
+  let e;try{e=JSON.parse(raw);}catch(_){return;}
+  if(!e||typeof e!=='object')return;
+  if(e.type==='state')onState(e);
+  else if(e.type==='line')onLine(e.line);
+  else if(e.type==='write')onWrite(e);
+  else if(e.type==='perm')onPerm(e);
+};
+function onState(e){
+  if(!sess.role&&e.state!=='connected')return;     // late event after we already left the chat
+  const s=e.state;
+  if(e.peer&&e.peer.address)sess.peer={name:e.peer.name||e.peer.address,address:e.peer.address};
+  if(s==='connected'){
+    if(!sess.peer){return;}
+    sess.threadKey=sess.peer.address;
+    thread(sess.peer.address,sess.peer.name).updated=Date.now();saveDb();
+    if(sess.role==='view'||!sess.role)sess.role='join';
+    if(view!=='chat')show('chat');
+  }
+  if(s==='closed'||s==='error')failPending();
+  sess.state=s;sess.detail=e.detail||'';
+  if(view==='chat')renderChat(s==='connected');else if(view==='home')renderHome();
+}
+function onLine(line){
+  if(typeof line!=='string'||!line.trim())return;
+  let m;try{m=JSON.parse(line);}catch(_){return;}
+  if(!m||typeof m!=='object')return;
+  const t=curThread();if(!t)return;
+  if(m.k==='m'&&typeof m.id==='string'&&typeof m.x==='string'){
+    if(!t.msgs.some(x=>!x.me&&x.id===m.id))addMsg(t,{id:m.id,t:Date.now(),x:m.x.slice(0,MAX_LEN),me:false});
+    call('send','ack-'+m.id,JSON.stringify({k:'a',id:m.id}));
+    if(view==='chat')renderChat(false);
+  }else if(m.k==='a'&&typeof m.id==='string'){
+    const x=t.msgs.find(z=>z.me&&z.id===m.id);
+    if(x&&x.st!=='delivered'){x.st='delivered';saveDb();if(view==='chat')renderChat(false);}
+  }
+}
+function onWrite(e){
+  if(typeof e.ref!=='string'||e.ref.indexOf('ack-')===0)return;
+  const t=curThread();if(!t)return;
+  const x=t.msgs.find(z=>z.me&&z.id===e.ref);if(!x)return;
+  if(e.ok){if(x.st==='sending')x.st='sent';}
+  else x.st='failed';
+  saveDb();if(view==='chat')renderChat(false);
+}
+function onPerm(e){
+  refreshEnv();
+  if(view==='home')renderHome();
+  toast(e.granted?'Bluetooth access allowed':'Bluetooth access was not allowed — the app cannot connect without it');
+}
+
+/* ---------- back button (called by native) ---------- */
+window.onNativeBack=function(){
+  const sp=document.getElementById('splash');
+  if(sp){sp.click();return true;}
+  if($('#modal').classList.contains('show')){closeModal(null);return true;}
+  if(view==='chat'){leaveChat();return true;}
+  if(view==='join'){show('home');return true;}
+  return false;
+};
+
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&view==='home'){refreshEnv();renderHome();}
+});
+setInterval(()=>{if(view==='home'&&document.visibilityState==='visible'){refreshEnv();renderHome();}},3000);
+
+loadDb();
+show('home');
+})();
+
+/* splash: plays on every launch, tap (or Android back) skips it. Add ?nosplash to the URL to disable. */
+(function(){
+  const s=document.getElementById('splash');
+  if(!s)return;
+  if(/[?&]nosplash\b/.test(location.search)){s.remove();return;}
+  const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let done=false;
+  function end(){
+    if(done)return;done=true;
+    s.classList.add('out');
+    setTimeout(function(){if(s.parentNode)s.parentNode.removeChild(s);},900);
+  }
+  s.addEventListener('click',end);
+  setTimeout(end,reduced?1200:3600);
+})();
+</script>
+</body>
+</html>
