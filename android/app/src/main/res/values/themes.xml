@@ -1,0 +1,9 @@
+<resources>
+<color name="bt_black">#0A0A0A</color>
+<!--  Dark from the very first frame, so there is no white flash before the HTML splash starts.  -->
+<style name="Theme.BtChat" parent="Theme.AppCompat.NoActionBar">
+<item name="android:windowBackground">@color/bt_black</item>
+<item name="android:statusBarColor">@color/bt_black</item>
+<item name="android:navigationBarColor">@color/bt_black</item>
+</style>
+</resources>
