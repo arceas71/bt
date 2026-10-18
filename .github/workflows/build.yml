@@ -1,7 +1,7 @@
 name: Build APK
 
 on:
-  workflow_dispatch:        # lets you press "Run workflow" by hand
+  workflow_dispatch:
   push:
     branches: [main, master]
 
@@ -22,8 +22,9 @@ jobs:
 
       - name: Build debug APK
         run: gradle assembleDebug --no-daemon
+        working-directory: android
 
       - uses: actions/upload-artifact@v4
         with:
           name: bt-chat-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
